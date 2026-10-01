@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-01T21:27:00+00:00",
+  "generated_at": "2026-10-01T22:28:07+00:00",
   "protocol": "train steps 1-29, threshold + model selection on 30-34, frozen evaluation on 35-49",
   "seeds": [
     0,
