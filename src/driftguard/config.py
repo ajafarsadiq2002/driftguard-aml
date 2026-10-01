@@ -65,6 +65,9 @@ AUDIT_SIZE = 10  # random analyst audit per test step (fixed before seeing test 
 K_VALUES = [10, 25, 50]
 POLICIES = ["static", "drift_triggered", "always", "full_retrain"]
 STRATEGIES = ["random", "uncertainty", "novelty", "hybrid"]
+# Sample weight for labels collected after deployment (audit, queries, full retrain), identical for every
+# policy. Fixed before seeing test results so a handful of new labels can move a model trained on ~30k rows.
+QUERY_WEIGHT = 10.0
 
 # ---------------------------------------------------------------------------
 # Models (kept modest so the full grid runs on a laptop CPU)
