@@ -136,6 +136,30 @@ def run_stream() -> None:
     print(f"[driftguard] stream grid: {len(per_step)} step rows written to per_step.parquet", flush=True)
 
 
+def run_explain() -> None:
+    import json
+
+    from driftguard import config
+    from driftguard.data import FEATURE_SETS, load_processed
+    from driftguard.explain import explain_stream, shap_figure
+    from driftguard.stream import AlarmConfig, prepare_seed
+
+    art = config.ARTIFACTS_DIR
+    drift = json.loads((art / "drift.json").read_text())
+    best = load_best_static()
+    cols = FEATURE_SETS[best["feature_set"]]
+    alarms = AlarmConfig(unsupervised_fired={s: True for s in drift["unsupervised_fired_test_steps"]},
+                         audit_thr=drift["audit_misses_thr"],
+                         audit_thr_uncertainty=drift["v2_uncertainty_audit_misses_thr"])
+    ctx = prepare_seed(load_processed(), best["model"], cols, config.SEEDS[0])
+    alerts, imp = explain_stream(ctx, alarms, config.HEADLINE, cols)
+    alerts.to_parquet(art / "alerts.parquet", index=False)
+    imp.to_parquet(art / "shap_importance.parquet", index=False)
+    shap_figure(imp, config.FIGURES_DIR / "shap_summary.png")
+    print(f"[driftguard] alerts.parquet: {len(alerts)} rows "
+          f"({alerts['outcome'].value_counts().to_dict()})", flush=True)
+
+
 def run_eval() -> None:
     import json
 
@@ -159,6 +183,7 @@ def run_eval() -> None:
               f"PR-AUC {r['pr_auc_mean']:.3f}+-{r['pr_auc_std']:.3f}  recall {r['recall_mean']:.3f}  "
               f"caught {r['caught_mean']:.1f}  labels {r['total_labels_mean']:.0f}", flush=True)
     print(f"[driftguard] wrote results.json and {len(figs)} figures", flush=True)
+    run_explain()
 
 
 RUNNERS = {"data": run_data, "train": run_train, "stream": run_stream, "eval": run_eval}
