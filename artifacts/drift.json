@@ -46,5 +46,16 @@
     "0": 158,
     "1": 11,
     "2": 1
-  }
+  },
+  "v2_uncertainty_audit_misses_thr": 5.0,
+  "v2_uncertainty_audit_calibration_miss_counts": {
+    "0": 7,
+    "1": 11,
+    "2": 5,
+    "3": 5,
+    "4": 2,
+    "5": 3,
+    "6": 1
+  },
+  "v2_note": "Post-hoc: designed after seeing phase-4 test results. Replaces the random audit with an uncertainty audit (10 transactions closest to the decision threshold); alarm threshold calibrated on steps 1-34 only."
 }
