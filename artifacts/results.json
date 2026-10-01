@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-10-01T22:12:32+00:00",
-  "git_commit": "04f5a6d",
+  "generated_at": "2026-10-01T22:37:18+00:00",
+  "git_commit": "ccbf26e",
   "config": {
     "train_steps": [
       1,
@@ -3916,5 +3916,65 @@
         48
       ]
     }
-  ]
+  ],
+  "explanations": {
+    "config": {
+      "policy": "drift_triggered",
+      "strategy": "hybrid",
+      "k": 25
+    },
+    "seed": 0,
+    "windows": {
+      "pre_shutdown": {
+        "outcomes": {
+          "true_positive": 750,
+          "missed_illicit": 164,
+          "false_positive": 53
+        },
+        "missed_illicit_median_score": 0.013443758711218834,
+        "missed_illicit_p90_score": 0.3548917382955553
+      },
+      "post_shutdown": {
+        "outcomes": {
+          "missed_illicit": 165,
+          "false_positive": 57,
+          "true_positive": 4
+        },
+        "missed_illicit_median_score": 0.000788151053711772,
+        "missed_illicit_p90_score": 0.025726798921823498
+      }
+    },
+    "top_features_mean_abs_shap_illicit": [
+      {
+        "feature": "local_53",
+        "pre_shutdown": 1.7409802946533104,
+        "post_shutdown": 1.0519647026908467
+      },
+      {
+        "feature": "local_90",
+        "pre_shutdown": 1.2470397598373029,
+        "post_shutdown": 0.32291915201576504
+      },
+      {
+        "feature": "local_5",
+        "pre_shutdown": 0.8171343055413118,
+        "post_shutdown": 0.06670543434616377
+      },
+      {
+        "feature": "local_76",
+        "pre_shutdown": 0.7765232390465309,
+        "post_shutdown": 0.1261332041236776
+      },
+      {
+        "feature": "local_2",
+        "pre_shutdown": 0.76019997653476,
+        "post_shutdown": 0.25397660093900015
+      },
+      {
+        "feature": "local_55",
+        "pre_shutdown": 0.5912398183045815,
+        "post_shutdown": 0.22368337831200932
+      }
+    ]
+  }
 }
