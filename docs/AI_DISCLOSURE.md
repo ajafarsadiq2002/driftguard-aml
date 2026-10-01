@@ -13,6 +13,7 @@ read from `artifacts/results.json`, which the pipeline produces.
 |---|---|---|
 | 0 · Scaffold | `requirements.txt`, `pyproject.toml`, `.gitignore` additions, `Makefile`, `scripts/download_data.sh`, `src/driftguard/config.py`, `src/driftguard/pipeline.py` CLI skeleton, `tests/test_config.py` | Chose the CLI design (`python -m driftguard.pipeline` with stage flags), reviewed and committed |
 | 1 · Data | `src/driftguard/data.py` (load, merge, label mapping, degree features, validation), `--data` stage in `pipeline.py`, `tests/test_data.py` | Supplied the Kaggle data locally, reviewed and committed |
+| 2 · Static baselines | `src/driftguard/splits.py`, `models.py`, `evaluate.py` (metrics + static baseline experiment), `--train` stage, `tests/test_splits.py`, `tests/test_metrics.py`, minimal `app/app.py` | Reviewed results and committed |
 
 ## Dependency notes
 
