@@ -17,7 +17,28 @@ def run_data() -> None:
 
 
 def run_train() -> None:
-    raise NotImplementedError("--train is implemented in phase 2")
+    import json
+    from datetime import UTC, datetime
+
+    from driftguard import config
+    from driftguard.data import load_processed
+    from driftguard.evaluate import pick_best_static, run_static_baselines
+
+    res = run_static_baselines(load_processed())
+    best = pick_best_static(res["val_summary"])
+    print(f"[driftguard] best static model on validation: {best}", flush=True)
+
+    config.ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
+    res["per_step"].to_parquet(config.ARTIFACTS_DIR / "static_per_step.parquet", index=False)
+    out = {
+        "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        "protocol": "train steps 1-29, threshold + model selection on 30-34, frozen evaluation on 35-49",
+        "seeds": config.SEEDS,
+        "best_static": best,
+        "validation": res["val_summary"].to_dict(orient="records"),
+        "test_windows": res["summary"].to_dict(orient="records"),
+    }
+    (config.ARTIFACTS_DIR / "static_baselines.json").write_text(json.dumps(out, indent=2))
 
 
 def run_stream() -> None:
