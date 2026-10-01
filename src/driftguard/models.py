@@ -31,9 +31,16 @@ def build_model(name: str, seed: int):
     raise ValueError(f"unknown model {name!r}")
 
 
-def fit_model(name: str, X: np.ndarray, y: np.ndarray, seed: int):
+def fit_model(name: str, X: np.ndarray, y: np.ndarray, seed: int, sample_weight=None, n_jobs: int | None = None):
     model = build_model(name, seed)
-    model.fit(X, y.astype(int))
+    if n_jobs is not None and "n_jobs" in model.get_params():
+        model.set_params(n_jobs=n_jobs)
+    if sample_weight is None:
+        model.fit(X, y.astype(int))
+    elif hasattr(model, "steps"):  # sklearn Pipeline: route weights to the final estimator
+        model.fit(X, y.astype(int), **{f"{model.steps[-1][0]}__sample_weight": sample_weight})
+    else:
+        model.fit(X, y.astype(int), sample_weight=sample_weight)
     return model
 
 
