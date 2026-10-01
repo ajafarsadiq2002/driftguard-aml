@@ -95,3 +95,24 @@ def shap_figure(imp: pd.DataFrame, path, top: int = 15) -> None:
     fig.tight_layout()
     fig.savefig(path, dpi=150, facecolor=SURFACE)
     plt.close(fig)
+
+
+def summarise_alerts(alerts: pd.DataFrame, imp: pd.DataFrame, top: int = 6) -> dict:
+    """Small, aggregate summary for results.json: outcome counts, confident-miss scores, SHAP shift."""
+    window = np.where(alerts["step"] >= config.SHUTDOWN_STEP, "post_shutdown", "pre_shutdown")
+    out = {"config": dict(config.HEADLINE), "seed": config.SEEDS[0], "windows": {}}
+    for w in ("pre_shutdown", "post_shutdown"):
+        a = alerts[window == w]
+        missed = a.loc[a["outcome"] == "missed_illicit", "score"]
+        out["windows"][w] = {
+            "outcomes": {k: int(v) for k, v in a["outcome"].value_counts().items()},
+            "missed_illicit_median_score": float(missed.median()) if len(missed) else None,
+            "missed_illicit_p90_score": float(missed.quantile(0.9)) if len(missed) else None,
+        }
+    wide = imp.pivot(index="feature", columns="window", values="mean_abs_shap").fillna(0)
+    wide = wide.sort_values("pre_shutdown", ascending=False).head(top)
+    out["top_features_mean_abs_shap_illicit"] = [
+        {"feature": f, "pre_shutdown": float(r["pre_shutdown"]), "post_shutdown": float(r["post_shutdown"])}
+        for f, r in wide.iterrows()
+    ]
+    return out
