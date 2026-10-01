@@ -52,7 +52,7 @@ def load_best_static() -> dict:
     return json.loads(path.read_text())["best_static"]
 
 
-def run_drift() -> None:
+def run_drift():
     import json
 
     import pandas as pd
@@ -87,10 +87,22 @@ def run_drift() -> None:
         "audit_calibration_miss_counts": mon.audit_calib["misses"].value_counts().sort_index().to_dict(),
     }
     (config.ARTIFACTS_DIR / "drift.json").write_text(json.dumps(meta, indent=2, default=int))
+    return df, best, mon, timeline
 
 
 def run_stream() -> None:
-    run_drift()
+    from driftguard import config
+    from driftguard.data import FEATURE_SETS
+    from driftguard.stream import AlarmConfig, prepare_seed, run_grid
+
+    df, best, mon, timeline = run_drift()
+    alarms = AlarmConfig(unsupervised_fired=dict(zip(timeline["step"], timeline["fired"], strict=True)),
+                         audit_thr=mon.audit_thr)
+    cols = FEATURE_SETS[best["feature_set"]]
+    contexts = [prepare_seed(df, best["model"], cols, seed) for seed in config.SEEDS]
+    per_step, _ = run_grid(contexts, alarms)
+    per_step.to_parquet(config.ARTIFACTS_DIR / "per_step.parquet", index=False)
+    print(f"[driftguard] stream grid: {len(per_step)} step rows written to per_step.parquet", flush=True)
 
 
 def run_eval() -> None:
