@@ -69,6 +69,18 @@ STRATEGIES = ["random", "uncertainty", "novelty", "hybrid"]
 # policy. Fixed before seeing test results so a handful of new labels can move a model trained on ~30k rows.
 QUERY_WEIGHT = 10.0
 
+# Analyst capacity: alerts reviewed per step for the alert-budget metric (top-N scores among labeled rows).
+ALERT_BUDGET = 50
+
+# Headline comparison, fixed before aggregation: pre-registered DriftGuard configuration.
+HEADLINE = {"policy": "drift_triggered", "strategy": "hybrid", "k": 25}
+# Post-hoc v2 (designed AFTER seeing phase-4 test results; always reported separately and labelled as such).
+HEADLINE_V2 = {"policy": "drift_triggered_v2", "strategy": "uncertainty", "k": 25}
+V2_NOTE = (
+    "Post-hoc: designed after seeing phase-4 test results. Replaces the random audit with an uncertainty audit "
+    "(10 transactions closest to the decision threshold); alarm threshold calibrated on steps 1-34 only."
+)
+
 # ---------------------------------------------------------------------------
 # Models (kept modest so the full grid runs on a laptop CPU)
 # ---------------------------------------------------------------------------
