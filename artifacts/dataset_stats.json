@@ -1,0 +1,10 @@
+{
+  "rows": 203769,
+  "time_steps": 49,
+  "illicit": 4545,
+  "licit": 42019,
+  "unknown": 157205,
+  "labeled_share": 0.2285,
+  "edges": 234355,
+  "n_features": 167
+}
