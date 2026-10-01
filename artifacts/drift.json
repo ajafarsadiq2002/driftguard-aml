@@ -1,0 +1,50 @@
+{
+  "monitor_model": {
+    "model": "xgb",
+    "feature_set": "local",
+    "val_pr_auc": 0.9864834951519995
+  },
+  "seed": 42,
+  "reference_steps": [
+    30,
+    34
+  ],
+  "calibration_steps": [
+    1,
+    34
+  ],
+  "quantile": 0.95,
+  "decision_threshold": 0.31472259759902954,
+  "psi_thr": 0.9788822158896916,
+  "ks_mean_thr": 0.1607901345744225,
+  "ks_features": [
+    "local_14",
+    "local_5",
+    "local_53",
+    "local_90",
+    "local_46",
+    "local_80",
+    "local_59",
+    "local_42",
+    "local_81",
+    "local_47",
+    "local_77",
+    "local_76",
+    "local_35",
+    "local_41",
+    "local_36",
+    "local_2",
+    "local_37",
+    "local_74",
+    "local_22",
+    "local_55"
+  ],
+  "unsupervised_fired_test_steps": [],
+  "audit_size": 10,
+  "audit_misses_thr": 1.0,
+  "audit_calibration_miss_counts": {
+    "0": 158,
+    "1": 11,
+    "2": 1
+  }
+}
