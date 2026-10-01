@@ -20,6 +20,7 @@ from scipy.stats import ks_2samp
 from sklearn.model_selection import GroupKFold
 
 from driftguard import config
+from driftguard.active import select
 from driftguard.models import fit_model, predict_scores, select_threshold
 from driftguard.splits import LeakageError, in_steps, labeled
 
@@ -131,6 +132,8 @@ class Monitor:
     audit_thr: float
     calib: pd.DataFrame
     audit_calib: pd.DataFrame
+    audit_thr_uncertainty: float = np.inf  # post-hoc v2
+    audit_calib_uncertainty: pd.DataFrame | None = None
 
 
 def build_monitor(df: pd.DataFrame, model_name: str, cols: list[str], seed: int = config.BASE_SEED) -> Monitor:
@@ -178,7 +181,18 @@ def build_monitor(df: pd.DataFrame, model_name: str, cols: list[str], seed: int 
     audit_calib = pd.DataFrame(audit_rows)
     audit_thr = calibrate_audit_threshold(audit_calib)
 
-    return Monitor(detector, scorer, cols, ks_cols, threshold, audit_thr, calib, audit_calib)
+    # Post-hoc v2: deterministic uncertainty audit (closest to the threshold), same calibration steps.
+    unc_rows = []
+    for s, grp in calib_lab.groupby("step"):
+        sc = grp["score"].to_numpy()
+        pick = select("uncertainty", config.AUDIT_SIZE, sc, threshold, sc, np.ones(len(grp), bool),
+                      np.random.default_rng(0))
+        unc_rows.append({"step": int(s), "misses": audit_misses(grp["y"].to_numpy()[pick], sc[pick], threshold)})
+    audit_calib_unc = pd.DataFrame(unc_rows)
+    audit_thr_unc = calibrate_audit_threshold(audit_calib_unc)
+
+    return Monitor(detector, scorer, cols, ks_cols, threshold, audit_thr, calib, audit_calib,
+                   audit_thr_unc, audit_calib_unc)
 
 
 def unsupervised_timeline(df: pd.DataFrame, mon: Monitor) -> pd.DataFrame:
