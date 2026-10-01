@@ -63,13 +63,14 @@ def toy_stream():
         frames.append(f)
     df = pd.concat(frames, ignore_index=True)
     ctx = prepare_seed(df, "logreg", ["a", "b", "c", "d"], seed=0)
-    alarms = AlarmConfig(unsupervised_fired={}, audit_thr=0.0, audit_size=5)
+    alarms = AlarmConfig(unsupervised_fired={}, audit_thr=0.0, audit_thr_uncertainty=0.0, audit_size=5)
     return df, ctx, alarms
 
 
 @pytest.mark.parametrize(
     "policy,strategy,k",
-    [("static", "none", 0), ("always", "hybrid", 5), ("drift_triggered", "random", 5), ("full_retrain", "none", 0)],
+    [("static", "none", 0), ("always", "hybrid", 5), ("drift_triggered", "random", 5),
+     ("drift_triggered_v2", "uncertainty", 5), ("full_retrain", "none", 0)],
 )
 def test_stream_predicts_step_t_with_model_trained_before_t(toy_stream, policy, strategy, k):
     df, ctx, alarms = toy_stream
