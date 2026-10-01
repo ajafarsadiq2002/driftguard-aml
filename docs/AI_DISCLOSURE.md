@@ -15,6 +15,7 @@ read from `artifacts/results.json`, which the pipeline produces.
 | 1 · Data | `src/driftguard/data.py` (load, merge, label mapping, degree features, validation), `--data` stage in `pipeline.py`, `tests/test_data.py` | Supplied the Kaggle data locally, reviewed and committed |
 | 2 · Static baselines | `src/driftguard/splits.py`, `models.py`, `evaluate.py` (metrics + static baseline experiment), `--train` stage, `tests/test_splits.py`, `tests/test_metrics.py`, minimal `app/app.py` | Reviewed results and committed |
 | 3 · Drift detection | `src/driftguard/drift.py` (score PSI, mean-KS monitor, random audit alarm, leakage-safe calibration on steps 1-34), `--stream` drift stage, `tests/test_drift.py` | Chose the audit-based alarm (option A) after the unsupervised monitor proved blind to the step-43 shift |
+| 4 · Active learning + stream | `src/driftguard/active.py` (random / uncertainty / novelty / hybrid strategies, simulated analyst), `src/driftguard/stream.py` (prequential loop, policies, parallel grid), weighted refits in `models.py`, `tests/test_active.py` | Reviewed design (audit alarm, post-deployment label weight) and committed |
 
 ## Dependency notes
 
