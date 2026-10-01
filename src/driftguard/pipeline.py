@@ -41,8 +41,56 @@ def run_train() -> None:
     (config.ARTIFACTS_DIR / "static_baselines.json").write_text(json.dumps(out, indent=2))
 
 
+def load_best_static() -> dict:
+    import json
+
+    from driftguard import config
+
+    path = config.ARTIFACTS_DIR / "static_baselines.json"
+    if not path.exists():
+        raise FileNotFoundError(f"{path} missing. Run: python -m driftguard.pipeline --train")
+    return json.loads(path.read_text())["best_static"]
+
+
+def run_drift() -> None:
+    import json
+
+    import pandas as pd
+
+    from driftguard import config
+    from driftguard.data import FEATURE_SETS, load_processed
+    from driftguard.drift import build_monitor, unsupervised_timeline
+
+    df = load_processed()
+    best = load_best_static()
+    mon = build_monitor(df, best["model"], FEATURE_SETS[best["feature_set"]])
+    timeline = unsupervised_timeline(df, mon)
+    d = mon.detector
+    print(f"[driftguard] unsupervised thresholds: psi_thr={d.psi_thr:.4f} ks_thr={d.ks_thr:.4f}; "
+          f"audit_thr={mon.audit_thr:.2f} misses per {config.AUDIT_SIZE}", flush=True)
+    print(timeline.to_string(index=False, float_format="%.3f"), flush=True)
+
+    pd.concat([mon.calib, timeline], ignore_index=True).to_parquet(config.ARTIFACTS_DIR / "drift.parquet", index=False)
+    meta = {
+        "monitor_model": best,
+        "seed": config.BASE_SEED,
+        "reference_steps": [min(config.VAL_STEPS), max(config.VAL_STEPS)],
+        "calibration_steps": [min(config.TRAIN_STEPS), max(config.VAL_STEPS)],
+        "quantile": config.DRIFT_THRESHOLD_QUANTILE,
+        "decision_threshold": mon.threshold,
+        "psi_thr": d.psi_thr,
+        "ks_mean_thr": d.ks_thr,
+        "ks_features": mon.ks_cols,
+        "unsupervised_fired_test_steps": timeline.loc[timeline["fired"], "step"].tolist(),
+        "audit_size": config.AUDIT_SIZE,
+        "audit_misses_thr": mon.audit_thr,
+        "audit_calibration_miss_counts": mon.audit_calib["misses"].value_counts().sort_index().to_dict(),
+    }
+    (config.ARTIFACTS_DIR / "drift.json").write_text(json.dumps(meta, indent=2, default=int))
+
+
 def run_stream() -> None:
-    raise NotImplementedError("--stream is implemented in phases 3-4")
+    run_drift()
 
 
 def run_eval() -> None:
