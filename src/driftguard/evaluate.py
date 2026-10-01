@@ -194,7 +194,7 @@ def git_commit() -> str:
         return "unknown"
 
 
-def build_results(windows: pd.DataFrame, per_step: pd.DataFrame) -> dict:
+def build_results(windows: pd.DataFrame, per_step: pd.DataFrame, explanations: dict | None = None) -> dict:
     """Assemble artifacts/results.json from pipeline outputs only."""
     import json
     from datetime import UTC, datetime
@@ -234,6 +234,7 @@ def build_results(windows: pd.DataFrame, per_step: pd.DataFrame) -> dict:
         "headline": headline(summary),
         "adaptive_grid": summary.to_dict(orient="records"),
         "alarm_fired_steps": fired_steps,
+        "explanations": explanations,
     }
 
 
