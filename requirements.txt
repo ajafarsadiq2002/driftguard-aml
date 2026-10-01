@@ -1,0 +1,15 @@
+# DriftGuard AML -- pinned for Python 3.11 (CPU only)
+pandas==3.0.6
+numpy==2.4.6
+scikit-learn==1.9.1
+xgboost==3.2.0
+scipy==1.17.1
+shap==0.51.0
+matplotlib==3.11.2
+plotly==7.1.0
+streamlit==1.64.0
+joblib==1.6.0
+pyarrow==25.0.1
+kaggle==2.2.4
+pytest==9.1.1
+ruff==0.16.10
