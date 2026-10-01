@@ -136,12 +136,12 @@ def run_stream() -> None:
     print(f"[driftguard] stream grid: {len(per_step)} step rows written to per_step.parquet", flush=True)
 
 
-def run_explain() -> None:
+def run_explain() -> dict:
     import json
 
     from driftguard import config
     from driftguard.data import FEATURE_SETS, load_processed
-    from driftguard.explain import explain_stream, shap_figure
+    from driftguard.explain import explain_stream, shap_figure, summarise_alerts
     from driftguard.stream import AlarmConfig, prepare_seed
 
     art = config.ARTIFACTS_DIR
@@ -158,6 +158,7 @@ def run_explain() -> None:
     shap_figure(imp, config.FIGURES_DIR / "shap_summary.png")
     print(f"[driftguard] alerts.parquet: {len(alerts)} rows "
           f"({alerts['outcome'].value_counts().to_dict()})", flush=True)
+    return summarise_alerts(alerts, imp)
 
 
 def run_eval() -> None:
@@ -171,7 +172,8 @@ def run_eval() -> None:
     art = config.ARTIFACTS_DIR
     per_step = pd.read_parquet(art / "per_step.parquet")
     windows = pd.read_parquet(art / "windows.parquet")
-    results = build_results(windows, per_step)
+    explanations = run_explain()
+    results = build_results(windows, per_step, explanations)
     (art / "results.json").write_text(json.dumps(results, indent=2, default=float))
     summary = summarise_stream(add_recovery_efficiency(windows))
     drift, pr = pd.read_parquet(art / "drift.parquet"), pd.read_parquet(art / "pr_curves.parquet")
@@ -183,7 +185,6 @@ def run_eval() -> None:
               f"PR-AUC {r['pr_auc_mean']:.3f}+-{r['pr_auc_std']:.3f}  recall {r['recall_mean']:.3f}  "
               f"caught {r['caught_mean']:.1f}  labels {r['total_labels_mean']:.0f}", flush=True)
     print(f"[driftguard] wrote results.json and {len(figs)} figures", flush=True)
-    run_explain()
 
 
 RUNNERS = {"data": run_data, "train": run_train, "stream": run_stream, "eval": run_eval}
@@ -209,8 +210,30 @@ def main(argv: list[str] | None = None) -> int:
         start = time.perf_counter()
         print(f"[driftguard] stage '{stage}' ...", flush=True)
         RUNNERS[stage]()
-        print(f"[driftguard] stage '{stage}' done in {time.perf_counter() - start:.1f}s", flush=True)
+        elapsed = time.perf_counter() - start
+        record_runtime(stage, elapsed)
+        print(f"[driftguard] stage '{stage}' done in {elapsed:.1f}s", flush=True)
+    if "eval" in stages:  # after runtimes are recorded, so the README matches results.json + runtimes.json
+        from driftguard.readme import update_readme
+
+        update_readme()
+        print("[driftguard] README numbers regenerated from results.json", flush=True)
     return 0
+
+
+def record_runtime(stage: str, seconds: float) -> None:
+    """Keep the latest wall-clock time per stage in artifacts/runtimes.json (shown in the README)."""
+    import json
+    import os
+    import platform
+
+    from driftguard import config
+
+    path = config.ARTIFACTS_DIR / "runtimes.json"
+    data = json.loads(path.read_text()) if path.exists() else {}
+    data.setdefault("stages_seconds", {})[stage] = round(seconds, 1)
+    data["machine"] = {"cpu_count": os.cpu_count(), "os": platform.system(), "python": platform.python_version()}
+    path.write_text(json.dumps(data, indent=2))
 
 
 if __name__ == "__main__":
