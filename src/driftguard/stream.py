@@ -71,8 +71,11 @@ def prepare_seed(df: pd.DataFrame, model_name: str, cols: list[str], seed: int) 
 
 
 def run_one(ctx: SeedContext, alarms: AlarmConfig, policy: str, strategy: str = "none", k: int = 0,
-            n_jobs_model: int = 1) -> dict:
-    """Run one policy/strategy/K/seed configuration through the stream."""
+            n_jobs_model: int = 1, on_predict=None) -> dict:
+    """Run one policy/strategy/K/seed configuration through the stream.
+
+    `on_predict(step_data, model, scores, threshold)` is called right after each step is scored (used for SHAP).
+    """
     rng_audit = np.random.default_rng([ctx.seed, 1])
     rng_query = np.random.default_rng([ctx.seed, 2])
     analyst = SimulatedAnalyst()
@@ -97,6 +100,8 @@ def run_one(ctx: SeedContext, alarms: AlarmConfig, policy: str, strategy: str = 
         y = sd.rows["y"].to_numpy()
         metrics = compute_metrics(y, scores, ctx.threshold)
         predicted_with_max_step = model_max_step
+        if on_predict is not None:
+            on_predict(sd, model, scores, ctx.threshold)
         top = np.argsort(-scores, kind="stable")[: config.ALERT_BUDGET]
         all_y.append(y)
         all_scores.append(scores)
