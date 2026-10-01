@@ -16,7 +16,7 @@ from joblib import Parallel, delayed
 from driftguard import config
 from driftguard.active import SimulatedAnalyst, fit_novelty, novelty_scores, select
 from driftguard.drift import audit_misses, draw_audit
-from driftguard.evaluate import compute_metrics
+from driftguard.evaluate import compute_metrics, per_step_and_window
 from driftguard.models import fit_model, predict_scores, select_threshold
 from driftguard.splits import LeakageError, in_steps, labeled
 
@@ -43,7 +43,8 @@ class SeedContext:
 @dataclass
 class AlarmConfig:
     unsupervised_fired: dict  # step -> bool (seed independent, computed by the frozen monitor)
-    audit_thr: float
+    audit_thr: float  # random audit (pre-registered drift_triggered policy)
+    audit_thr_uncertainty: float = np.inf  # uncertainty audit (post-hoc v2 policy)
     audit_size: int = config.AUDIT_SIZE
 
 
@@ -78,7 +79,7 @@ def run_one(ctx: SeedContext, alarms: AlarmConfig, policy: str, strategy: str = 
     model, model_max_step = ctx.base_model, max(config.VAL_STEPS)
     pool_X, pool_y, pool_steps = [], [], []
     labels_cum = 0
-    rows = []
+    rows, all_y, all_scores, all_steps = [], [], [], []
 
     def retrain():
         X = np.vstack([ctx.X_base, *pool_X])
@@ -96,15 +97,25 @@ def run_one(ctx: SeedContext, alarms: AlarmConfig, policy: str, strategy: str = 
         y = sd.rows["y"].to_numpy()
         metrics = compute_metrics(y, scores, ctx.threshold)
         predicted_with_max_step = model_max_step
+        top = np.argsort(-scores, kind="stable")[: config.ALERT_BUDGET]
+        all_y.append(y)
+        all_scores.append(scores)
+        all_steps.append(np.full(len(y), t))
 
         # 3-4. drift check and analyst queries
         available = np.ones(len(y), dtype=bool)
         new_positions, n_audit, misses, fired = [], 0, np.nan, False
-        if policy == "drift_triggered":
-            audit = draw_audit(len(y), alarms.audit_size, rng_audit)
+        if policy in ("drift_triggered", "drift_triggered_v2"):
+            if policy == "drift_triggered":  # pre-registered: uniform random audit
+                audit = draw_audit(len(y), alarms.audit_size, rng_audit)
+                audit_thr = alarms.audit_thr
+            else:  # post-hoc v2: audit the transactions closest to the decision threshold
+                audit = select("uncertainty", alarms.audit_size, scores, ctx.threshold, sd.novelty, available,
+                               rng_audit)
+                audit_thr = alarms.audit_thr_uncertainty
             analyst.label(sd.rows, audit, t, "audit")
             misses = audit_misses(y[audit], scores[audit], ctx.threshold)
-            fired = bool(alarms.unsupervised_fired.get(t, False) or misses > alarms.audit_thr)
+            fired = bool(alarms.unsupervised_fired.get(t, False) or misses > audit_thr)
             available[audit] = False
             new_positions.append(audit)
             n_audit = len(audit)
@@ -127,20 +138,29 @@ def run_one(ctx: SeedContext, alarms: AlarmConfig, policy: str, strategy: str = 
             pool_y.append(y[pos])
             pool_steps.append(t)
             labels_cum += len(pos)
-        retrained = policy in ("always", "full_retrain") or (policy == "drift_triggered" and fired)
+        retrained = policy in ("always", "full_retrain") or (policy.startswith("drift_triggered") and fired)
         if retrained and pool_X:
             model, model_max_step = retrain()
 
         rows.append({
             "step": t, **metrics, "labels_step": len(pos), "labels_cum": labels_cum,
             "labeled_illicit": int((y[pos] == 1).sum()), "audit_size": n_audit,
+            "alerts_reviewed": len(top), "alert_hits": int((y[top] == 1).sum()),
             "audit_misses": misses, "unsup_fired": bool(alarms.unsupervised_fired.get(t, False)),
             "fired": fired, "retrained": bool(retrained and pool_X),
             "train_max_step": predicted_with_max_step,
         })
 
     key = {"policy": policy, "strategy": strategy, "k": k, "seed": ctx.seed}
-    return {"per_step": [{**key, **r} for r in rows], "queries": [{**key, **q} for q in analyst.log],
+    y_all, s_all, st_all = np.concatenate(all_y), np.concatenate(all_scores), np.concatenate(all_steps)
+    _, windows = per_step_and_window(st_all, y_all, s_all, ctx.threshold)
+    for w in windows:
+        in_window = [r for r in rows if r["step"] in config.EVAL_WINDOWS[w["window"]]]
+        for col in ("labels_step", "alert_hits", "alerts_reviewed"):
+            w["labels_used" if col == "labels_step" else col] = sum(r[col] for r in in_window)
+    post = np.isin(st_all, list(config.EVAL_WINDOWS["post_shutdown"]))
+    return {"per_step": [{**key, **r} for r in rows], "windows": [{**key, **w} for w in windows],
+            "queries": [{**key, **q} for q in analyst.log], "post_scores": (y_all[post], s_all[post]),
             "final_model": model}
 
 
@@ -148,6 +168,7 @@ def grid_configs() -> list[tuple[str, str, int]]:
     cfgs = [("static", "none", 0), ("full_retrain", "none", 0)]
     for policy in ("drift_triggered", "always"):
         cfgs += [(policy, s, k) for s in config.STRATEGIES for k in config.K_VALUES]
+    cfgs += [("drift_triggered_v2", "uncertainty", k) for k in config.K_VALUES]  # post-hoc, see config.V2_NOTE
     return cfgs
 
 
@@ -158,8 +179,11 @@ def run_grid(contexts: list[SeedContext], alarms: AlarmConfig, n_jobs: int = -1,
         delayed(_run_light)(ctx, alarms, *cfg) for ctx, cfg in jobs
     )
     per_step = pd.DataFrame([r for res in results for r in res["per_step"]])
+    windows = pd.DataFrame([w for res in results for w in res["windows"]])
     queries = pd.DataFrame([q for res in results for q in res["queries"]])
-    return per_step, queries
+    post_scores = {(r["per_step"][0]["policy"], r["per_step"][0]["strategy"], r["per_step"][0]["k"]): r["post_scores"]
+                   for r in results if r["per_step"][0]["seed"] == config.SEEDS[0]}
+    return per_step, windows, queries, post_scores
 
 
 def _run_light(ctx, alarms, policy, strategy, k):
