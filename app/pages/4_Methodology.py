@@ -92,7 +92,7 @@ st.markdown(
   static after the shutdown. Only large label budgets (always querying 50 per step, or full retraining) help.
 - Features are anonymised, so SHAP reasons name features (`local_53`) but cannot be read as business rules.
 - The analyst is simulated. Real labels arrive late, cost money and can be wrong.
-- Only about 23% of transactions have labels, and after the shutdown some steps contain as few as 2 illicit
+- Only about 23% of transactions have labels, and after the shutdown some steps contain only a handful of illicit
   cases, so per-step metrics are noisy. We therefore report pooled windows.
 - Single dataset and single shift event; post-deployment labels get a fixed sample weight of 10.
 - The v2 design was created after seeing test results and is reported separately for that reason.
