@@ -12,6 +12,7 @@ read from `artifacts/results.json`, which the pipeline produces.
 | Phase | What was AI-generated | Human role |
 |---|---|---|
 | 0 · Scaffold | `requirements.txt`, `pyproject.toml`, `.gitignore` additions, `Makefile`, `scripts/download_data.sh`, `src/driftguard/config.py`, `src/driftguard/pipeline.py` CLI skeleton, `tests/test_config.py` | Chose the CLI design (`python -m driftguard.pipeline` with stage flags), reviewed and committed |
+| 1 · Data | `src/driftguard/data.py` (load, merge, label mapping, degree features, validation), `--data` stage in `pipeline.py`, `tests/test_data.py` | Supplied the Kaggle data locally, reviewed and committed |
 
 ## Dependency notes
 
