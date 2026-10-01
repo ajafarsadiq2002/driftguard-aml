@@ -10,7 +10,10 @@ STAGES = ["data", "train", "stream", "eval"]
 
 
 def run_data() -> None:
-    raise NotImplementedError("--data is implemented in phase 1")
+    from driftguard.data import build_dataset
+
+    _, stats = build_dataset(save=True)
+    print("[driftguard] data validated: " + ", ".join(f"{k}={v}" for k, v in stats.items()), flush=True)
 
 
 def run_train() -> None:
