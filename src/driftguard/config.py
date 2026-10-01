@@ -57,6 +57,7 @@ PSI_BINS = 10
 KS_TOP_FEATURES = 20
 KS_PVALUE = 0.01
 DRIFT_THRESHOLD_QUANTILE = 0.95  # calibrated on steps 1-34 only
+AUDIT_SIZE = 10  # random analyst audit per test step (fixed before seeing test results)
 
 # ---------------------------------------------------------------------------
 # Active learning grid
