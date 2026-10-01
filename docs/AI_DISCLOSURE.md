@@ -16,6 +16,7 @@ read from `artifacts/results.json`, which the pipeline produces.
 | 2 · Static baselines | `src/driftguard/splits.py`, `models.py`, `evaluate.py` (metrics + static baseline experiment), `--train` stage, `tests/test_splits.py`, `tests/test_metrics.py`, minimal `app/app.py` | Reviewed results and committed |
 | 3 · Drift detection | `src/driftguard/drift.py` (score PSI, mean-KS monitor, random audit alarm, leakage-safe calibration on steps 1-34), `--stream` drift stage, `tests/test_drift.py` | Chose the audit-based alarm (option A) after the unsupervised monitor proved blind to the step-43 shift |
 | 4 · Active learning + stream | `src/driftguard/active.py` (random / uncertainty / novelty / hybrid strategies, simulated analyst), `src/driftguard/stream.py` (prequential loop, policies, parallel grid), weighted refits in `models.py`, `tests/test_active.py` | Reviewed design (audit alarm, post-deployment label weight) and committed |
+| 5 · Evaluation + v2 | Pooled window metrics, alert-budget metric, recovery efficiency, `results.json` builder and matplotlib figures in `evaluate.py`; `--eval` stage; post-hoc v2 uncertainty-audit policy in `stream.py` / `drift.py` | Approved running one clearly labelled post-hoc v2 design; fixed headline configuration before aggregation |
 
 ## Dependency notes
 
