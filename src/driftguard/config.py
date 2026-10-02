@@ -58,6 +58,22 @@ KS_TOP_FEATURES = 20
 KS_PVALUE = 0.01
 DRIFT_THRESHOLD_QUANTILE = 0.95  # calibrated on steps 1-34 only
 AUDIT_SIZE = 10  # random analyst audit per test step (fixed before seeing test results)
+# Post-hoc v3 (designed after seeing test results): alert-rate alarm fires below this calibration quantile.
+ALERT_RATE_QUANTILE = 0.05
+V4_NOTE = (
+    "Post-hoc, written down before running: 'follow the money' casework. Per step, an analyst reviews K labelled "
+    "transactions from the highest model score down; each confirmed illicit case moves its unreviewed 1-hop graph "
+    "neighbours to the front of the review queue. Afterwards the analyst works the top-ALERT_BUDGET remaining "
+    "alerts, with neighbours of confirmed illicit cases ranked first. Control arm: same K + alert budget without "
+    "graph re-ranking. Primary metric: illicit identified on steps 43-49 (review hits + alert hits). Frozen base "
+    "model; only paid labels from step t re-rank step t; reviewed rows are never evaluated. PROTOCOL CHANGE vs "
+    "CLAUDE.md (labels from step t influence step t), approved by the team and disclosed."
+)
+V3_NOTE = (
+    "Post-hoc: designed after seeing test results. Label-free alarm on the share of all transactions the frozen "
+    "model flags; fires when it drops below the 5th percentile of steps 1-34. A v3 retraining policy was to be run "
+    "only if this alarm fired after the shutdown."
+)
 
 # ---------------------------------------------------------------------------
 # Active learning grid
