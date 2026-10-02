@@ -14,10 +14,11 @@ post = G[G["window"] == "post_shutdown"]
 static = c.cfg_rows(post, "static", "none", 0).iloc[0]
 oracle = c.cfg_rows(post, "full_retrain", "none", 0).iloc[0]
 
-st.title("🏷️ Label Budget")
+st.title("🏷️ Label Budget Planner")
 st.markdown(
-    "Choose when the analyst is asked (policy), which transactions they label (strategy) and how many per query "
-    "(K). Results are for the post-shutdown window, steps 43–49, mean ± std over 5 seeds."
+    "**How many analyst reviews does it take to recover after a shift, and which transactions should they "
+    "review?** Choose when the analyst is asked (policy), which transactions they label (strategy) and how many "
+    "per query (K). Results are for the post-shutdown window, steps 43–49, mean ± std over 5 seeds."
 )
 
 c1, c2, c3 = st.columns([2, 2, 1.4])
