@@ -17,6 +17,8 @@ made the key research decisions listed below, reviewed every phase, and made eve
 | Phase 0 | CLI design: `python -m driftguard.pipeline` with stage flags as the cross-platform entry point; `Makefile` only a thin wrapper |
 | Phase 3 | When the specified label-free drift monitor proved blind to the step-43 shift, chose to report that honestly and add an audit-based alarm (option A), rather than tuning thresholds on test data |
 | Phase 4 → 5 | Accepted the negative result and approved **one** clearly labelled post-hoc variant (v2), run once, reported separately |
+| After phase 8 | Reframed the project as a blind-spot auditor (no new results). Approved one more post-hoc label-free check (v3 alert rate) with its design written down before running; it did not fire and was reported as such |
+| After v3 | Asked for a literature search; approved v4 "follow the money" casework, including the disclosed protocol change (paid step-t labels may re-rank other step-t transactions). Design fixed in `config.V4_NOTE` before running; run once; it did not help |
 | Throughout | Reviewed outputs; kept the project framed around what the data actually shows |
 
 ## Where the AI deviated from the brief, and why (all disclosed in the README)
@@ -24,7 +26,7 @@ made the key research decisions listed below, reviewed every phase, and made eve
 - **KS drift rule.** The brief's share of features with KS p < 0.01 saturates at this sample size (0.65–0.95 even
   between validation steps), so the alarm used the mean KS statistic instead, justified on steps 1–34 only. Both
   are recorded.
-- **Audit alarm and v2** were added as described above.
+- **Audit alarm, v2, v3 and v4** were added as described above. v4 relaxes the brief's rule that labels from step t only affect later steps; the team approved this, and it is disclosed in the README.
 - **Post-deployment label weight (10)** and **alert budget (50)** were added and fixed before aggregating test
   results.
 - **`matplotlib`** was added to the fixed stack: SHAP's summary plot needs it, and it saves the PNG figures in
@@ -43,3 +45,5 @@ made the key research decisions listed below, reviewed every phase, and made eve
 | 6 · Explainability | `src/driftguard/explain.py` (TreeExplainer SHAP per alert using the model that scored each step, top-5 reasons, pre/post-shutdown importance figure), `on_predict` hook in `stream.py`, SHAP step in `--eval`, `tests/test_explain.py` | Reviewed and committed |
 | 7 · Dashboard | `app/app.py` (navigation), `app/home.py`, `app/common.py`, `app/pages/1_Timeline.py`, `2_Alert_Queue.py`, `3_Label_Budget.py`, `4_Methodology.py`, `.streamlit/config.toml` dark navy theme with a CVD-validated chart palette; screenshots in `docs/screenshots/` captured by the agent through a browser | Reviewed pages and committed |
 | 8 · Documentation | `README.md` (prose and structure), `src/driftguard/readme.py` (regenerates README numbers from `results.json`), `tests/test_readme.py`, SHAP summary and runtimes in `results.json` / `runtimes.json`, `LICENSE`, this file | Will add team names, demo and video links; reviewed and committed |
+| 8b · Reframe + v3 | Blind-spot-auditor framing in `README.md` and `app/home.py`, Label Budget Planner wording, v3 alert-rate monitor in `drift.py` with its Timeline chart and README finding, `tests/test_drift.py` additions | Chose option 3 (reframe, then one post-hoc test); reviewed and committed |
+| 8c · Literature + v4 | Web literature review (Weber 2019, GuiltyWalker 2021 and others), graph-clustering diagnostic, `src/driftguard/casework.py`, `tests/test_casework.py`, v4 results in `results.json`, README finding and Methodology table | Approved the protocol change and the single v4 run; reviewed and committed |
