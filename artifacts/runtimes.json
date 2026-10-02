@@ -3,7 +3,7 @@
     "data": 2.7,
     "train": 60.1,
     "stream": 473.4,
-    "eval": 7.7
+    "eval": 14.2
   },
   "machine": {
     "cpu_count": 16,
