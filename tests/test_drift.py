@@ -6,7 +6,9 @@ import pytest
 
 from driftguard.drift import (
     DriftDetector,
+    alert_rate,
     audit_misses,
+    calibrate_alert_rate_threshold,
     calibrate_audit_threshold,
     calibrate_thresholds,
     draw_audit,
@@ -76,3 +78,12 @@ def test_calibration_refuses_test_steps():
         calibrate_thresholds(bad)
     with pytest.raises(LeakageError):
         calibrate_audit_threshold(bad)
+
+
+def test_alert_rate_and_low_side_calibration():
+    assert alert_rate(np.array([0.1, 0.6, 0.9, 0.2]), 0.5) == pytest.approx(0.5)
+    calib = pd.DataFrame({"step": range(1, 35), "alert_rate": np.linspace(0.01, 0.2, 34)})
+    assert calibrate_alert_rate_threshold(calib, q=0.05) == pytest.approx(np.quantile(calib["alert_rate"], 0.05))
+    bad = pd.concat([calib, pd.DataFrame({"step": [40], "alert_rate": [0.0]})])
+    with pytest.raises(LeakageError):
+        calibrate_alert_rate_threshold(bad)
