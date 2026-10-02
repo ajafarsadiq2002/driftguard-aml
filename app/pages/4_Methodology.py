@@ -85,6 +85,21 @@ st.markdown(
 """
 )
 
+cw = R.get("casework_v4")
+if cw:
+    st.header("Post-hoc v4: following the money")
+    post = pd.DataFrame([r for r in cw["summary"] if r["window"] == "post_shutdown"])
+    post = post.assign(Arm=post["arm"].map({"static_alerts": "Static alerts only", "control": "Score-only control",
+                                            "v4_graph": "Follow the money (graph)"}),
+                       K=post["k"].astype(int),
+                       **{"Illicit identified, steps 43–49": [c.pm(m, s, ".1f") for m, s in
+                                                              zip(post["identified_mean"], post["identified_std"],
+                                                                  strict=True)],
+                          "Analyst reviews": post["labels_step_mean"].round(0).astype(int)})
+    st.dataframe(post[["Arm", "K", "Analyst reviews", "Illicit identified, steps 43–49"]], hide_index=True,
+                 width="stretch")
+    st.caption(cw["note"])
+
 st.header("Honest limitations")
 st.markdown(
     """
