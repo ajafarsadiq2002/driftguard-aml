@@ -235,7 +235,19 @@ def build_results(windows: pd.DataFrame, per_step: pd.DataFrame, explanations: d
         "adaptive_grid": summary.to_dict(orient="records"),
         "alarm_fired_steps": fired_steps,
         "explanations": explanations,
+        "casework_v4": casework_summary(),
     }
+
+
+def casework_summary() -> dict | None:
+    """Post-hoc v4 casework results (None if the stage has not been run)."""
+    path = config.ARTIFACTS_DIR / "casework_windows.parquet"
+    if not path.exists():
+        return None
+    from driftguard.casework import summarise_casework
+
+    return {"note": config.V4_NOTE, "alert_budget": config.ALERT_BUDGET,
+            "summary": summarise_casework(pd.read_parquet(path))}
 
 
 # ---------------------------------------------------------------------------
