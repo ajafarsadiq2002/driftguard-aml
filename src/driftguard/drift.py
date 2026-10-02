@@ -104,6 +104,17 @@ def calibrate_thresholds(calib: pd.DataFrame, q: float = config.DRIFT_THRESHOLD_
     return {"psi_thr": float(np.quantile(calib["psi"], q)), "ks_thr": float(np.quantile(calib["ks_mean"], q))}
 
 
+def alert_rate(scores: np.ndarray, threshold: float) -> float:
+    """Share of transactions the model flags (score >= threshold). Needs no labels."""
+    return float(np.mean(np.asarray(scores) >= threshold))
+
+
+def calibrate_alert_rate_threshold(calib: pd.DataFrame, q: float = config.ALERT_RATE_QUANTILE) -> float:
+    """Post-hoc v3: alarm when a step's alert rate falls below the q-quantile of calibration steps (one-sided)."""
+    _check_calibration_steps(calib)
+    return float(np.quantile(calib["alert_rate"], q))
+
+
 def calibrate_audit_threshold(audits: pd.DataFrame, q: float = config.DRIFT_THRESHOLD_QUANTILE) -> float:
     """Audit alarm fires when misses exceed the q-quantile of simulated audits on calibration steps."""
     _check_calibration_steps(audits)
@@ -134,6 +145,7 @@ class Monitor:
     audit_calib: pd.DataFrame
     audit_thr_uncertainty: float = np.inf  # post-hoc v2
     audit_calib_uncertainty: pd.DataFrame | None = None
+    alert_rate_thr: float = -np.inf  # post-hoc v3 (low-side alarm)
 
 
 def build_monitor(df: pd.DataFrame, model_name: str, cols: list[str], seed: int = config.BASE_SEED) -> Monitor:
@@ -166,6 +178,8 @@ def build_monitor(df: pd.DataFrame, model_name: str, cols: list[str], seed: int 
         split = "val" if s in config.VAL_STEPS else "train"
         rows.append({"step": s, "split": split, **ref.stats(cur["score"].to_numpy(), cur[ks_cols].to_numpy())})
     calib = pd.DataFrame(rows)
+    rates = calib_frame.groupby("step")["score"].apply(lambda s: alert_rate(s.to_numpy(), threshold))
+    calib["alert_rate"] = calib["step"].map(rates)
     thr = calibrate_thresholds(calib)
     detector.psi_thr, detector.ks_thr = thr["psi_thr"], thr["ks_thr"]
     calib["fired"] = [detector.fires(r) for r in calib.to_dict("records")]
@@ -191,8 +205,10 @@ def build_monitor(df: pd.DataFrame, model_name: str, cols: list[str], seed: int 
     audit_calib_unc = pd.DataFrame(unc_rows)
     audit_thr_unc = calibrate_audit_threshold(audit_calib_unc)
 
+    alert_rate_thr = calibrate_alert_rate_threshold(calib)
+    calib["alert_rate_fired"] = calib["alert_rate"] < alert_rate_thr
     return Monitor(detector, scorer, cols, ks_cols, threshold, audit_thr, calib, audit_calib,
-                   audit_thr_unc, audit_calib_unc)
+                   audit_thr_unc, audit_calib_unc, alert_rate_thr)
 
 
 def unsupervised_timeline(df: pd.DataFrame, mon: Monitor) -> pd.DataFrame:
@@ -200,7 +216,9 @@ def unsupervised_timeline(df: pd.DataFrame, mon: Monitor) -> pd.DataFrame:
     rows = []
     for s in config.TEST_STEPS:
         step_df = df[df["step"] == s]
-        st = mon.detector.stats(predict_scores(mon.scorer, step_df[mon.cols].to_numpy()),
-                                step_df[mon.ks_cols].to_numpy())
-        rows.append({"step": s, "split": "test", **st, "fired": mon.detector.fires(st)})
+        scores = predict_scores(mon.scorer, step_df[mon.cols].to_numpy())
+        st = mon.detector.stats(scores, step_df[mon.ks_cols].to_numpy())
+        rate = alert_rate(scores, mon.threshold)
+        rows.append({"step": s, "split": "test", **st, "fired": mon.detector.fires(st), "alert_rate": rate,
+                     "alert_rate_fired": rate < mon.alert_rate_thr})
     return pd.DataFrame(rows)
