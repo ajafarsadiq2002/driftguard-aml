@@ -75,6 +75,23 @@ for col, stat, thr, title in ((cols[0], "psi", d["psi_thr"], "Score PSI vs refer
     col.plotly_chart(c.style(f2, height=360, legend=dict(orientation="h", y=-0.3, x=0, bgcolor="rgba(0,0,0,0)"),
                              margin=dict(l=10, r=10, t=50, b=10)), width="stretch")
 
+if "alert_rate" in drift.columns and "v3_alert_rate_thr" in d:
+    f3 = go.Figure()
+    split_colors = (("train", c.MUTED), ("val", c.COLORS["extra"]), ("test", c.COLORS["DriftGuard (pre-registered)"]))
+    for split, color in split_colors:
+        part = drift[drift["split"] == split].sort_values("step")
+        f3.add_trace(go.Scatter(x=part["step"], y=part["alert_rate"], name=f"{split} steps", mode="lines+markers",
+                                line=dict(color=color, width=2), marker=dict(size=6)))
+    f3.add_hline(y=d["v3_alert_rate_thr"], line_dash="dot", line_color=c.ALARM,
+                 annotation_text="v3 alarm if below (5th pct, steps 1–34)", annotation_font_color=c.ALARM)
+    c.shutdown_marker(f3)
+    f3.update_layout(title="Post-hoc v3: share of all transactions flagged by the model")
+    f3.update_xaxes(title="Time step")
+    f3.update_yaxes(tickformat=".0%")
+    st.plotly_chart(c.style(f3, height=340, legend=dict(orientation="h", y=-0.3, x=0, bgcolor="rgba(0,0,0,0)"),
+                            margin=dict(l=10, r=10, t=50, b=10)), width="stretch")
+    st.caption(d["v3_note"])
+
 st.info(
     f"Thresholds are the 95th percentile of each statistic over steps 1–34 only (PSI {d['psi_thr']:.3f}, mean "
     f"KS {d['ks_mean_thr']:.3f}). Neither fires at step 43: illicit transactions are about 1–2% of a step, so "
