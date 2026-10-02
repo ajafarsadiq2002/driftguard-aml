@@ -119,7 +119,8 @@ st.markdown(
     "Weber, M. et al. (2019). *Anti-Money Laundering in Bitcoin: Experimenting with Graph Convolutional Networks "
     "for Financial Forensics.* KDD Workshop on Anomaly Detection in Finance. Elliptic Data Set, **CC BY-NC-ND "
     "4.0**. The raw data is not redistributed; this app shows only derived metrics.\n\n"
-    "Most of this project's code was written by Claude Code (an AI coding agent) under the team's direction. See "
-    "`docs/AI_DISCLOSURE.md`. Code licence: MIT."
+    "Built by team Kosmos Nexus with AI-assisted development (Claude Code). The team defined the research question "
+    "and rules, made the key methodological decisions and reviewed all work. See `docs/AI_DISCLOSURE.md`. "
+    "Code licence: MIT."
 )
 st.caption(f"Results generated {R['generated_at']} from commit {R['git_commit']}.")
