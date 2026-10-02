@@ -94,6 +94,12 @@ def run_drift():
         "v2_uncertainty_audit_calibration_miss_counts":
             mon.audit_calib_uncertainty["misses"].value_counts().sort_index().to_dict(),
         "v2_note": config.V2_NOTE,
+        "v3_alert_rate_quantile": config.ALERT_RATE_QUANTILE,
+        "v3_alert_rate_thr": mon.alert_rate_thr,
+        "v3_alert_rate_fired_test_steps": timeline.loc[timeline["alert_rate_fired"], "step"].tolist(),
+        "v3_alert_rate_test_range": [float(timeline["alert_rate"].min()), float(timeline["alert_rate"].max())],
+        "v3_alert_rate_step43": float(timeline.loc[timeline["step"] == config.SHUTDOWN_STEP, "alert_rate"].iloc[0]),
+        "v3_note": config.V3_NOTE,
     }
     (config.ARTIFACTS_DIR / "drift.json").write_text(json.dumps(meta, indent=2, default=int))
     return df, best, mon, timeline
@@ -119,6 +125,26 @@ def save_pr_curves(post_scores: dict) -> None:
     pd.DataFrame(rows).to_parquet(config.ARTIFACTS_DIR / "pr_curves.parquet", index=False)
 
 
+def run_casework_stage(df=None, contexts=None) -> None:
+    """Post-hoc v4 'follow the money' casework (config.V4_NOTE); frozen base model, no retraining."""
+    from driftguard import config
+    from driftguard.casework import build_adjacency, run_casework_grid
+    from driftguard.data import FEATURE_SETS, find_raw_file, load_processed, read_edges
+    from driftguard.stream import prepare_seed
+
+    if contexts is None:
+        df = load_processed() if df is None else df
+        best = load_best_static()
+        contexts = [prepare_seed(df, best["model"], FEATURE_SETS[best["feature_set"]], s) for s in config.SEEDS]
+    adj = build_adjacency(read_edges(find_raw_file(config.EDGES_CSV)))
+    per_step, windows = run_casework_grid(contexts, adj)
+    per_step.to_parquet(config.ARTIFACTS_DIR / "casework_per_step.parquet", index=False)
+    windows.to_parquet(config.ARTIFACTS_DIR / "casework_windows.parquet", index=False)
+    post = windows[windows["window"] == "post_shutdown"].groupby(["arm", "k"])[["identified", "pr_auc"]].mean()
+    print("[driftguard] v4 casework, steps 43-49 (mean over seeds):", flush=True)
+    print(post.round(3).to_string(), flush=True)
+
+
 def run_stream() -> None:
     from driftguard import config
     from driftguard.data import FEATURE_SETS
@@ -130,6 +156,7 @@ def run_stream() -> None:
     cols = FEATURE_SETS[best["feature_set"]]
     contexts = [prepare_seed(df, best["model"], cols, seed) for seed in config.SEEDS]
     per_step, windows, _, post_scores = run_grid(contexts, alarms)
+    run_casework_stage(contexts=contexts)
     per_step.to_parquet(config.ARTIFACTS_DIR / "per_step.parquet", index=False)
     windows.to_parquet(config.ARTIFACTS_DIR / "windows.parquet", index=False)
     save_pr_curves(post_scores)
