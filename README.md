@@ -1,7 +1,8 @@
-# 🛡️ DriftGuard AML
+# 🛡️ DriftGuard AML: a blind-spot auditor for AML models
 
-**Your anti-money-laundering model can fail silently. We measured how badly after a real dark-market shutdown, why
-standard drift alarms miss it, and what it actually takes to recover.**
+**Your anti-money-laundering model can fail silently. DriftGuard shows *when* a model is confidently wrong, *why*
+(SHAP), and *how many analyst reviews* it would take to recover, tested on a real dark-market shutdown in Bitcoin
+transaction data.**
 
 🔗 **Live demo:** _TODO: Streamlit Community Cloud URL_ · 🎬 **Video:** _TODO: demo video URL_
 
@@ -27,7 +28,16 @@ Worse, the model is not *uncertain* about its misses; it is *confident*. The usu
 threshold, watching for distribution drift, asking analysts to review borderline cases) are all blind to that kind
 of failure. For a compliance team, this means laundering goes through while every dashboard stays green.
 
-DriftGuard asks three questions, with a strict no-leakage protocol:
+## What DriftGuard gives an AML team
+
+| Capability | What it answers | Where |
+|---|---|---|
+| **Blind-spot audit** | Is the model still catching illicit activity, and are its misses *confident*, which no threshold change can fix? | Timeline, Alert Queue |
+| **Explanations** | Why was each alert raised, and why was each illicit case missed? Which old warning signs stopped firing? | Alert Queue (SHAP) |
+| **Drift alarm check** | Do standard label-free drift monitors (PSI, KS) and analyst audits actually notice the failure? | Timeline |
+| **Label-budget planner** | How many analyst reviews per step, chosen how, buy how much recovery? | Label Budget |
+
+Every claim is tested with a strict no-leakage protocol. The questions behind it:
 
 1. How badly does a well-tuned model break after the shutdown?
 2. Can a drift alarm notice, and can a small analyst label budget (K labels per step) bring it back?
@@ -68,7 +78,10 @@ flowchart LR
 
 The headline configuration (drift-triggered, hybrid, K=25), audit size, label weight and alert budget were all
 **fixed before the test results were aggregated**. One post-hoc variant (**v2**) was designed after seeing the
-phase-4 results; it is always labelled as post-hoc and reported separately.
+phase-4 results, then a label-free **alert-rate** check (**v3**), then literature-inspired **"follow the money"**
+graph casework (**v4**). All three are labelled post-hoc, reported separately, and were each run exactly once.
+v4 also relaxes one rule: an analyst's paid labels from step t may re-rank *other* transactions of step t
+(reviewed transactions are never evaluated). The team approved and disclosed that change.
 
 ## Results
 
@@ -100,13 +113,16 @@ Recovery efficiency of the pre-registered DriftGuard (extra illicit caught vs st
 4. **The old fingerprints fade.** Mean |SHAP| for illicit transactions, before → after: `local_53` 1.74 → 1.05, `local_90` 1.25 → 0.32, `local_5` 0.82 → 0.07, `local_76` 0.78 → 0.13.
 5. **Budget beats triggers.** The pre-registered DriftGuard is within noise of static (0.041 ± 0.006 vs 0.037 ± 0.001, 165 labels). The best adaptive configuration (Always query, uncertainty, K=50) reaches 0.140 ± 0.037 with 750 labels (selected on test results, so context only).
 6. **Which transactions to label matters.** Always querying K=50, ranked by post-shutdown PR-AUC: uncertainty (0.140) > random (0.081) > hybrid (0.057) > novelty (0.040). Novelty sampling (IsolationForest) is the weakest. This contradicts our prior that novelty or hybrid would find the new illicit patterns.
-7. **Recovery is expensive even with every label.** The full-retrain oracle uses 16,670 labels and reaches 0.495 ± 0.010 PR-AUC (29.8% recall).
+7. **Even the alert rate stays normal (post-hoc v3).** The share of *all* transactions the model flags is 7.0% at step 43 (test range 7.0%–19.8%), well above the 2.4% alarm level set by the 5th percentile of steps 1–34, which saw lower rates with no shutdown at all. The alarm fired on no test step, so the planned v3 policy was not run.
+8. **Following the money did not help either (post-hoc v4).** After the shutdown an illicit transaction is still far more likely to sit next to another illicit one, so we tested analyst casework that follows payment-graph neighbours of confirmed cases, with the same workload as a score-only control (K reviews + top-50 alerts per step). Illicit transactions identified on steps 43–49: static alerts only 12.4; K=10: control 15.2 vs graph 14.6; K=25: control 21.2 vs graph 19.8; K=50: control 32.0 vs graph 30.0. The model's top-scored reviews confirm too few post-shutdown cases to seed the search, and their neighbours are mostly licit or unlabelled. Graph features that report big post-shutdown gains rely on labels from the same time step, which a real-time monitor does not have.
+9. **Recovery is expensive even with every label.** The full-retrain oracle uses 16,670 labels and reaches 0.495 ± 0.010 PR-AUC (29.8% recall).
 <!-- END:findings -->
 
-**Bottom line:** we set out to show that DriftGuard notices and recovers. **It does not.** The honest,
-reproducible result is a diagnosis: after this shift the model's misses are confident, so label-free monitors,
-random audits and uncertainty-based checks all stay quiet. Only label budgets on the order of hundreds of
-analyst reviews start to help, and full recovery needs far more.
+**Bottom line.** We set out to build an alarm that notices the shift and recovers with a few labels. **That part
+did not work, and we report it plainly.** What DriftGuard *does* deliver is the diagnosis an AML team needs:
+after this shift the model's misses are confident, so label-free monitors, random audits and uncertainty-based
+checks all stay quiet. Only label budgets of hundreds of analyst reviews start to help, and full recovery needs
+far more. The Label Budget planner makes that trade-off explicit instead of leaving it to guesswork.
 
 | | |
 |---|---|
@@ -184,7 +200,7 @@ The loader also finds the CSVs if they sit in an `elliptic_bitcoin_dataset/` fol
 offers the same stages (`make all`, `make test`, `make app`) as thin wrappers around these commands.
 
 <!-- BEGIN:runtime -->
-Last full run on a 16-thread laptop CPU (Windows, Python 3.11.5): `--data` 3 s, `--train` 1.0 min, `--stream` 7.9 min, `--eval` 8 s; total ≈ 9 min. Seeds: [0, 1, 2, 3, 4].
+Last full run on a 16-thread laptop CPU (Windows, Python 3.11.5): `--data` 3 s, `--train` 1.0 min, `--stream` 7.9 min, `--eval` 14 s; total ≈ 9 min. Seeds: [0, 1, 2, 3, 4].
 <!-- END:runtime -->
 
 ### How we kept it honest
@@ -194,6 +210,7 @@ Last full run on a 16-thread laptop CPU (Windows, Python 3.11.5): `--data` 3 s, 
   for every policy; the analyst can only label ground-truth rows of the current step.
 - `tests/test_drift.py`: drift and audit thresholds refuse calibration data from step 35 onwards.
 - `tests/test_explain.py`: alerts never contain raw feature values.
+- `tests/test_casework.py`: v4 uses the same analyst workload as its control and never evaluates reviewed rows.
 - `tests/test_readme.py`: README numbers match `results.json`.
 - Fixed seeds; five seeds for everything stochastic; mean ± std everywhere.
 
@@ -211,6 +228,7 @@ driftguard-aml/
 │   ├── stream.py      # prequential test-then-train loop + parallel grid
 │   ├── evaluate.py    # metrics, aggregation, results.json, figures
 │   ├── explain.py     # SHAP for alerts and misses
+│   ├── casework.py    # post-hoc v4 "follow the money" graph casework
 │   ├── readme.py      # regenerates README numbers from results.json
 │   └── pipeline.py    # CLI: python -m driftguard.pipeline --all
 ├── app/               # Streamlit dashboard (reads artifacts/ only)
@@ -241,7 +259,8 @@ values.
   only a handful of illicit cases. Per-step metrics are noisy, so we report pooled windows.
 - **Fixed design choices.** Post-deployment labels get a fixed sample weight of 10; the audit size is 10; the
   alert budget is 50. These were set before the results and not tuned.
-- **Post-hoc v2.** The uncertainty-audit variant was designed after seeing test results and is reported separately.
+- **Post-hoc v2, v3 and v4.** The uncertainty audit, the alert-rate check and the graph casework were designed after
+  seeing test results. Each was run once and is reported separately. v4 uses a relaxed, disclosed protocol.
 - **Drift rule change.** The originally specified KS rule (share of features with p < 0.01) saturates at this sample
   size; we replaced it with the mean KS statistic based on steps 1–34 alone, and report both.
 
