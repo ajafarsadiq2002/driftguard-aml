@@ -57,5 +57,14 @@
     "5": 3,
     "6": 1
   },
-  "v2_note": "Post-hoc: designed after seeing phase-4 test results. Replaces the random audit with an uncertainty audit (10 transactions closest to the decision threshold); alarm threshold calibrated on steps 1-34 only."
+  "v2_note": "Post-hoc: designed after seeing phase-4 test results. Replaces the random audit with an uncertainty audit (10 transactions closest to the decision threshold); alarm threshold calibrated on steps 1-34 only.",
+  "v3_alert_rate_quantile": 0.05,
+  "v3_alert_rate_thr": 0.023569941387541,
+  "v3_alert_rate_fired_test_steps": [],
+  "v3_alert_rate_test_range": [
+    0.06957047791893527,
+    0.19824035941594909
+  ],
+  "v3_alert_rate_step43": 0.07011653170057278,
+  "v3_note": "Post-hoc: designed after seeing test results. Label-free alarm on the share of all transactions the frozen model flags; fires when it drops below the 5th percentile of steps 1-34. A v3 retraining policy was to be run only if this alarm fired after the shutdown."
 }
