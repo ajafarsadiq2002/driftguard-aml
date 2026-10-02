@@ -105,10 +105,40 @@ def render_findings(res: dict) -> str:
         f"6. **Which transactions to label matters.** Always querying K=50, ranked by post-shutdown PR-AUC: "
         f"{strat_txt}. Novelty sampling (IsolationForest) is the weakest. This contradicts our prior that novelty "
         f"or hybrid would find the new illicit patterns.",
-        f"7. **Recovery is expensive even with every label.** The full-retrain oracle uses "
+        f"7. **Even the alert rate stays normal (post-hoc v3).** The share of *all* transactions the model flags "
+        f"is {d['v3_alert_rate_step43']:.1%} at step 43 (test range {d['v3_alert_rate_test_range'][0]:.1%}–"
+        f"{d['v3_alert_rate_test_range'][1]:.1%}), well above the {d['v3_alert_rate_thr']:.1%} alarm level set by "
+        f"the 5th percentile of steps 1–34, which saw lower rates with no shutdown at all. The alarm fired on "
+        f"{_steps(d['v3_alert_rate_fired_test_steps'])}, so the planned v3 policy was not run."
+        if "v3_alert_rate_thr" in d else "7. (alert-rate check not run)",
+        _casework_finding(res),
+        f"9. **Recovery is expensive even with every label.** The full-retrain oracle uses "
         f"{orc['total_labels_mean']:,.0f} labels and reaches {_pm(orc, 'pr_auc')} PR-AUC "
         f"({orc['recall_mean']:.1%} recall).",
     ])
+
+
+def _casework_finding(res: dict) -> str:
+    cw = res.get("casework_v4")
+    if not cw:
+        return "8. (v4 casework not run)"
+    post = {(r["arm"], int(r["k"])): r for r in cw["summary"] if r["window"] == "post_shutdown"}
+    st = post[("static_alerts", 0)]
+    parts = "; ".join(
+        f"K={k}: control {post[('control', k)]['identified_mean']:.1f} vs graph "
+        f"{post[('v4_graph', k)]['identified_mean']:.1f}"
+        for k in sorted({k for a, k in post if a == "control"})
+    )
+    return (
+        f"8. **Following the money did not help either (post-hoc v4).** After the shutdown an illicit transaction is "
+        f"still far more likely to sit next to another illicit one, so we tested analyst casework that follows "
+        f"payment-graph neighbours of confirmed cases, with the same workload as a score-only control (K reviews + "
+        f"top-{cw['alert_budget']} alerts per step). Illicit transactions identified on steps 43–49: static alerts "
+        f"only {st['identified_mean']:.1f}; {parts}. The model's top-scored reviews confirm too few post-shutdown "
+        f"cases to seed the search, and their neighbours are mostly licit or unlabelled. Graph features that "
+        f"report big post-shutdown gains rely on labels from the same time step, which a real-time monitor does "
+        f"not have."
+    )
 
 
 def render_baselines(res: dict) -> str:
