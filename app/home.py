@@ -14,32 +14,39 @@ H = R["headline"]
 
 static_pre = c.cfg_rows(G, "static", "none", 0).query("window == 'pre_shutdown'").iloc[0]
 static_post, dg, v2, oracle = H["static"], H["driftguard"], H["driftguard_v2"], H["full_retrain"]
-alerts = c.parquet("alerts")
-missed = alerts[alerts["outcome"] == "missed_illicit"]
-miss_pre = missed[missed["step"] < c.SHUTDOWN_STEP]["score"].median()
-miss_post = missed[missed["step"] >= c.SHUTDOWN_STEP]["score"].median()
+best = H["best_in_grid"]
+ex = R["explanations"]["windows"]
+miss_pre = ex["pre_shutdown"]["missed_illicit_median_score"]
+miss_post = ex["post_shutdown"]["missed_illicit_median_score"]
 drift = R["drift"]
+n_test = R["config"]["test_steps"][1] - R["config"]["test_steps"][0] + 1
 
 st.title("🛡️ DriftGuard AML")
-st.markdown("#### Your AML model can fail silently. We measured how badly, and what it takes to recover.")
+st.markdown("#### A blind-spot auditor for AML models: when the model is confidently wrong, why, and what it "
+            "takes to recover.")
 st.markdown(
     "Fraud models are usually trained once and assumed to keep working. On the Elliptic Bitcoin dataset, a "
-    "real dark-market shutdown around **time step 43** changes criminal behaviour. DriftGuard trains a detector on "
-    "early time steps, streams through later ones, watches for drift, asks a simulated analyst for a small "
-    "number of labels, retrains, and reports honestly whether that recovers the lost performance."
+    "real dark-market shutdown around **time step 43** changes criminal behaviour. DriftGuard replays that shift "
+    "step by step with no look-ahead: it **audits** whether the model still catches illicit activity, **explains** "
+    "every alert and every miss with SHAP, **checks** whether standard drift alarms notice, and **plans** how many "
+    "analyst reviews it would take to recover."
 )
 
 k1, k2, k3, k4 = st.columns(4)
-k1.metric("Static PR-AUC, steps 35–42", f"{static_pre['pr_auc_mean']:.3f}", help="Before the shutdown")
-k2.metric("Static PR-AUC, steps 43–49", f"{static_post['pr_auc_mean']:.3f}",
-          delta=f"{static_post['pr_auc_mean'] - static_pre['pr_auc_mean']:.3f}", help="After the shutdown")
-k3.metric("DriftGuard PR-AUC, steps 43–49", c.pm(dg["pr_auc_mean"], dg["pr_auc_std"]),
-          delta=f"{dg['pr_auc_mean'] - static_post['pr_auc_mean']:+.3f} vs static", delta_color="off",
-          help=f"Pre-registered configuration: {dg['policy']}, {dg['strategy']}, K={int(dg['k'])}")
-k4.metric("DriftGuard analyst labels", f"{dg['total_labels_mean']:.0f}",
-          delta=f"{dg['extra_caught_vs_static_mean']:+.1f} illicit caught vs static", delta_color="off",
-          help="Analyst labels over steps 35–49; extra illicit caught on 43–49 vs static (same seed)")
-st.caption("Pooled over the window, mean ± std over 5 seeds. Every number on this page comes from results.json.")
+k1.metric("Model PR-AUC: before → after shutdown",
+          f"{static_pre['pr_auc_mean']:.3f} → {static_post['pr_auc_mean']:.3f}",
+          help="Static XGBoost, steps 35–42 vs 43–49, pooled, mean of 5 seeds")
+k2.metric("Median score of a missed illicit tx", f"{miss_post:.4f}",
+          delta=f"was {miss_pre:.4f} before the shutdown", delta_color="off",
+          help="Confident misses: the model is sure these are licit, so lowering the threshold cannot help")
+k3.metric("Label-free drift alarms fired", f"{len(drift['unsupervised_fired_test_steps'])} of {n_test} steps",
+          help="Score PSI + mean KS statistic, thresholds calibrated on steps 1–34 only")
+k4.metric(f"Illicit in top-{R['config']['alert_budget']} alerts, steps 43–49",
+          f"{static_post['alert_hits_mean']:.0f} → {best['alert_hits_mean']:.0f}",
+          delta=f"with {best['k']:.0f} uncertainty reviews/step", delta_color="off",
+          help="Static vs the best adaptive configuration (always query, uncertainty, K=50). Selected on test "
+               "results, so this is context for planning, not a pre-registered claim.")
+st.caption("Pooled over the window, mean over 5 seeds. Every number on this page comes from results.json.")
 
 st.subheader("What we found")
 st.markdown(
