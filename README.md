@@ -6,7 +6,7 @@ transaction data.**
 
 🔗 **Live demo:** _TODO: Streamlit Community Cloud URL_ · 🎬 **Video:** _TODO: demo video URL_
 
-Built for the Global Innovation Build Challenge V2, Track 02: Applied (Finance).
+Built by **team Kosmos Nexus** for the Global Innovation Build Challenge V2, Track 02: Applied (Finance).
 
 > [!IMPORTANT]
 > **Disclaimer:** DriftGuard is a **research prototype**. It is **not** a financial, compliance, or AML product, and
@@ -271,13 +271,16 @@ PyArrow · pytest · ruff · Kaggle API · Streamlit Community Cloud
 
 ## AI disclosure
 
-Most of the code, tests and documentation in this repository were written by **Claude Code** (Anthropic's AI coding
-agent), directed and reviewed by the team, who made every commit. Details in
-[`docs/AI_DISCLOSURE.md`](docs/AI_DISCLOSURE.md).
+Built by team Kosmos Nexus with AI-assisted development (**Claude Code**, Anthropic's AI coding agent). The team
+defined the research question, rules and experimental design, made every key methodological decision, approved
+every protocol change, and reviewed and committed all work. Claude Code wrote most of the code under that
+direction. Decisions and a phase-by-phase log are in [`docs/AI_DISCLOSURE.md`](docs/AI_DISCLOSURE.md).
 
 ## Team
 
-_TODO: team members' full names_
+**Kosmos Nexus**
+
+- _TODO: team members' full names_
 
 ## License
 
